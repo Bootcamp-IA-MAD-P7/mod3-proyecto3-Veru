@@ -56,7 +56,7 @@ class LangChain:
     
 # Integración con Streamlit   
 # Inicializar LangChain
-lc = LangChain(model_type='api', api_key='your-api-key)
+lc = LangChain(model_type='api', api_key='your-api-key')
 
 # Interfaz de Streamlit
 st.title("Generador de Contenido Automático")
@@ -69,13 +69,14 @@ custom_info = st.text_area("Información Personalizada (opcional):")
 
 # Botón para generar contenido
 if st.button("Generar Contenido"):
-    # Generar contenido de texto
-    text_content = lc.generate_text(topic, audience, platform, custom_info)
-    st.write("Contenido de Texto:")
-    st.write(text_content)
+    try:
+        # Generar contenido de texto
+        text_content = lc.generate_text(topic, audience, platform, custom_info)
+        st.write("Contenido de Texto:")
+        st.write(text_content)
 
-    # Generar imágenes (usando una API gratuita como DALL-E)
-    image_url = lc.generate_image(topic, audience, platform)
-    st.image(image_url, caption="Imagen Generada")
-
-# Nota: Asegúrate de manejar las excepciones y limitaciones de las APIs
+        # Generar imágenes (usando una API gratuita como DALL-E)
+        image_url = lc.generate_image(topic, audience, platform)
+        st.image(image_url, caption="Imagen Generada")
+    except Exception as e:
+        st.error(f"Ocurrió un error: {e}")
