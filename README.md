@@ -35,7 +35,8 @@ Este proyecto consiste en crear un sistema de generación automática de conteni
 ```
 
 ### 2. **Automatizar el Proceso de Cumplimiento de Requisitos**
-Para automatizar el proceso de cumplimiento de los requisitos, podemos seguir los siguientes pasos:
+
+Para mantener un desarrollo ordenado, podemos seguir los siguientes pasos:
 
 #### 1. **Control de Versiones**
 - **Git**: Utilizar Git para el control de versiones y gestionar el historial del código.
@@ -43,46 +44,35 @@ Para automatizar el proceso de cumplimiento de los requisitos, podemos seguir lo
 
 #### 2. **Desarrollo Iterativo**
 - **Iteraciones**: Realizar iteraciones para mejorar y optimizar el sistema.
-- **Pruebas Automáticas**: Implementar pruebas automáticas para verificar el cumplimiento de los requisitos.
 
-#### 3. **Despliegue Automático**
+#### 3. **Despliegue**
 - **Streamlit**: Usar Streamlit para el despliegue sencillo de la aplicación.
-- **GitHub Actions**: Configurar GitHub Actions para automatizar el despliegue y pruebas.
 
-### 3. **Ejemplo de Despliegue Automático con GitHub Actions**
-Vamos a configurar un archivo `.github/workflows/main.yml` para automatizar el despliegue y pruebas.
+## Cómo ejecutar el proyecto
 
-#### .github/workflows/main.yml
-```yaml
-name: CI/CD
+1. **Clonar el repositorio**
+```bash
+git clone https://github.com/Bootcamp-IA-MAD-P7/mod3-proyecto3-Veru.git
+cd mod3-proyecto3-Veru
+```
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+2. **Crear y activar un entorno virtual (recomendado)**
+```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux/Mac
+source .venv/bin/activate
+```
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+3. **Instalar dependencias**
+```bash
+pip install -r requirements.txt
+```
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+4. **Ejecutar la aplicación**
+```bash
+streamlit run path/to/your/app.py
+```
 
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Run tests
-      run: python -m unittest discover -s tests
-
-    - name: Deploy to Streamlit
-      run: |
-        streamlit run app.py
+> **Nota:** Por defecto, el proyecto utiliza un modelo local (`gpt2`) a través de Hugging Face Transformers, con el objetivo de **minimizar el gasto**, tal como se solicita en el briefing.
