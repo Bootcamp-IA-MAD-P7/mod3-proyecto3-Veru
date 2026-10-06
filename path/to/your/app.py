@@ -1,82 +1,77 @@
+import os
+os.environ["TRANSFORMERS_NO_TORCH_COMPILE"] = "1"
+
 import streamlit as st
-from langchain import LangChain
-import openai
 from transformers import pipeline
-import requests
+import torch
 
-# Configurar la Clave de API:
-openai.api_key = 'your-openai-api-key'
+st.set_page_config(page_title="Generador de Contenido Automático", layout="centered")
 
-#API de Texto
+MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
-text_generator = pipeline('text-generation', model='gpt2')
+@st.cache_resource(show_spinner=False)
+def load_generator():
+    return pipeline(
+        "text-generation",
+        model=MODEL_NAME,
+        dtype=torch.float32,
+        device=-1,
+        trust_remote_code=False
+    )
 
-# API de Imágenes: 
-def generate_image(prompt):
-    url = 'https://api.dall-e.com/generate'
-    response = requests.post(url, json={'prompt': prompt})
-    return response.json()['image_url']
-
-# crear una clase LangChain que maneje tanto modelos locales como APIs gratuitas. 
-class LangChain:
-    def __init__(self, model_type='local', model_path='gpt2', api_key=None):
-        self.model_type = model_type
-        self.model_path = model_path
-        self.api_key = api_key
-        self.text_generator = None
-        self.image_generator = None
-
-        if self.model_type == 'local':
-            self.text_generator = pipeline('text-generation', model=self.model_path)
-        elif self.model_type == 'api':
-            self.text_generator = pipeline('text-generation', model='huggingface/transformers')
-            self.image_generator = self.api_image_generator
-
-    def generate_text(self, topic, audience, platform, custom_info=None):
-        prompt = f"Topic: {topic}\nAudience: {audience}\nPlatform: {platform}\n{custom_info if custom_info else ''}"
-        if self.model_type == 'local':
-            return self.text_generator(prompt, max_length=100)[0]['generated_text']
-        else:
-            return self.text_generator(prompt, max_length=100)[0]['generated_text']
-
-    def generate_image(self, topic, audience, platform):
-        if self.model_type == 'api':
-            prompt = f"Topic: {topic}\nAudience: {audience}\nPlatform: {platform}"
-            return self.image_generator(prompt)
-        else:
-            raise ValueError("Image generation not supported for local models")
-
-    def api_image_generator(self, prompt):
-        url = 'https://api.dall-e.com/generate'
-        headers = {
-            'Authorization': f'Bearer {self.api_key}'
-        }
-        response = requests.post(url, json={'prompt': prompt}, headers=headers)
-        return response.json()['image_url']
+class ContentGenerator:
+    def __init__(self):
+        self.text_generator = load_generator()
     
-# Integración con Streamlit   
-# Inicializar LangChain
-lc = LangChain(model_type='api', api_key='your-api-key')
+    def _build_prompt(self, topic, audience, platform, custom_info=None):
+        base_prompt = (
+            f"Escribe un informe educativo en ESPAÑOL claro y correcto sobre {topic}, dirigido a {audience}.\n\n"
+            f"Estructura: INTRODUCCIÓN, DESARROLLO, CONCLUSIÓN.\n"
+            f"Tono: divulgativo, comprensible. Usa vocabulario adecuado.\n"
+        )
+        if custom_info and custom_info.strip():
+            base_prompt += f"\nInstrucciones: {custom_info.strip()}\n\n"
+        base_prompt += "Escribe el informe completo en español:\n\n"
+        return base_prompt
+    
+    def generate_text(self, topic, audience, platform, custom_info=None):
+        prompt = self._build_prompt(topic, audience, platform, custom_info)
+        result = self.text_generator(
+            prompt,
+            max_new_tokens=200,
+            num_return_sequences=1,
+            do_sample=True,
+            temperature=0.7,
+            top_p=0.9,
+            top_k=40,
+            repetition_penalty=1.2,
+            eos_token_id=151645,
+            truncation=True
+        )
+        generated = result[0]["generated_text"]
+        if generated.startswith(prompt):
+            generated = generated[len(prompt):]
+        return generated.strip()
 
-# Interfaz de Streamlit
+if "content_gen" not in st.session_state:
+    st.session_state.content_gen = ContentGenerator()
+
+content_gen = st.session_state.content_gen
+
 st.title("Generador de Contenido Automático")
+topic = st.text_input("Tema:", key="topic")
+audience = st.text_input("Audiencia:", key="audience")
+platform = st.selectbox("Plataforma:", ["Blog","Twitter/X","Instagram","LinkedIn","Divulgación","Infantil","SEO"], key="platform")
+custom_info = st.text_area("Información personalizada (opcional):", key="custom")
 
-# Entrada del usuario
-topic = st.text_input("Tema:")
-audience = st.text_input("Audiencia:")
-platform = st.text_input("Plataforma:")
-custom_info = st.text_area("Información Personalizada (opcional):")
-
-# Botón para generar contenido
 if st.button("Generar Contenido"):
     try:
-        # Generar contenido de texto
-        text_content = lc.generate_text(topic, audience, platform, custom_info)
-        st.write("Contenido de Texto:")
-        st.write(text_content)
-
-        # Generar imágenes (usando una API gratuita como DALL-E)
-        image_url = lc.generate_image(topic, audience, platform)
-        st.image(image_url, caption="Imagen Generada")
+        if not topic or not audience:
+            st.warning("Rellena Tema y Audiencia")
+        else:
+            with st.spinner("Generando contenido..."):
+                text_content = content_gen.generate_text(topic, audience, platform, custom_info)
+            st.subheader("Contenido de Texto")
+            st.write(text_content)
     except Exception as e:
-        st.error(f"Ocurrió un error: {e}")
+        st.error(f"Error: {e}")
